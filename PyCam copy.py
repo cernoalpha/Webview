@@ -82,6 +82,7 @@ class Api:
             print(f"Error initializing camera: {e}")
             self.cam = None
 
+                 #Extra Code
         self.start_monitoring()
         self.camera_connected = False
         self.relay_connected = False
@@ -96,6 +97,9 @@ class Api:
 
         self.led_states = [False] * 4
 
+         ## In Between
+
+     #Extra Code
 
     def start_monitoring(self):
         threading.Thread(target=self.monitor_camera, daemon=True).start()
@@ -201,6 +205,7 @@ class Api:
         conn.commit()
         conn.close()
 
+
     def add_record_from_json(self, json_record):
         record = json.loads(json_record)
         self.add_record({
@@ -249,12 +254,7 @@ class Api:
         except Exception as e:
             return str(e)
 
-    def toggle_live_feed(self):
-        with self.lock:
-            self.live_feed_on = not self.live_feed_on
-            if self.live_feed_on:
-                Thread(target=self.show_frame).start()
-            return self.live_feed_on
+    ## In Between
 
     def toggle_live_feed(self):
         with self.lock:
@@ -301,28 +301,25 @@ class Api:
     def capture_image(self):
         if self.cam is None:
             print("Error: Camera not initialized.")
-            return
-
-        try:
-            self.cam.BeginAcquisition()
-            image_result = self.cam.GetNextImage()
-            if image_result.IsIncomplete():
-                print(f"Image incomplete with image status {image_result.GetImageStatus()}")
-                return
-
-            image_data = image_result.GetNDArray()
-            image = Image.fromarray(image_data)
-            buffer = io.BytesIO()
-            image.save(buffer, format='JPEG')
-            img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            
-            self.captured_images.append(img_str)
-            image_result.Release()
-            self.cam.EndAcquisition()
-            return img_str
-        except PySpin.SpinnakerException as e:
-            print(f"Error capturing image: {e}")
             return None
+
+        self.cam.BeginAcquisition()
+        image_result = self.cam.GetNextImage()
+        
+        if image_result.IsIncomplete():
+            print(f"Image incomplete with image status {image_result.GetImageStatus()}")
+            return None
+
+        image_data = image_result.GetNDArray()
+        image = Image.fromarray(image_data)
+        buffer = io.BytesIO()
+        image.save(buffer, format='JPEG')
+        img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        self.captured_images.append(img_str)
+        image_result.Release()
+        self.cam.EndAcquisition()
+        return img_str
 
     def append_captured_images(self):
         with open('form_data.json', 'r+') as f:
@@ -331,9 +328,9 @@ class Api:
             f.seek(0)
             json.dump(data, f)
             f.truncate()
-            
-        result = process_captured_images()
-        pdf_path = self.generate_pdf(result)
+            result = process_captured_images()
+
+            pdf_path = self.generate_pdf(result)
 
         save_dir = os.path.abspath('Results')
         os.makedirs(save_dir, exist_ok=True)
@@ -341,9 +338,9 @@ class Api:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         pdf_filename = os.path.join(save_dir, f"Result_{timestamp}.pdf")
         os.rename(pdf_path, pdf_filename)
+        
 
         pdf_url = f'file:///{pdf_filename}'.replace("\\", "/")
-        
         with open('form_data.json', 'r+') as f:
             data = json.load(f)
             data['pdf_url'] = pdf_url
@@ -356,9 +353,9 @@ class Api:
         form_data['pdf_url'] = pdf_url
         self.add_record_from_json(json.dumps(form_data))
 
+
         webbrowser.open_new(pdf_url)
         return {"status": "success"}
-
     
     def generate_pdf(self, result):
         buffer = io.BytesIO()
@@ -386,12 +383,14 @@ class Api:
                 elements.append(img)
                 elements.append(Spacer(1, 12))
 
+        # Adding Remarks section
         elements.append(Spacer(1, 24))
         elements.append(Paragraph("Remarks:", styles['Heading2']))
         elements.append(Spacer(1, 12))
         elements.append(Paragraph(result.get('remarks', '__________________________'), styles['Normal']))
         elements.append(Spacer(1, 24))
 
+        # Adding Signature section
         elements.append(Paragraph("Signature of Inspector: __________________", styles['Normal']))
         elements.append(Spacer(1, 12))
         elements.append(Paragraph(f"Date: {datetime.now().strftime('%Y-%m-%d')}", styles['Normal']))
@@ -406,7 +405,6 @@ class Api:
             f.write(buffer.getvalue())
         
         return pdf_path
-
     
     def reset_captured_images(self):
         self.captured_images = []
@@ -419,7 +417,6 @@ class Api:
             json.dump(self.form_data, f)
         self.captured_images = []
 
-
     async def websocket_handler(self, websocket, path):
         self.websocket_clients.add(websocket)
         try:
@@ -427,14 +424,12 @@ class Api:
         finally:
             self.websocket_clients.remove(websocket)
 
-
     def __del__(self):
         if self.cam:
             self.cam.DeInit()
         del self.cam
         self.cam_list.Clear()
         self.system.ReleaseInstance()
-
 
 api = Api()
 
