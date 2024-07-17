@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAL WebView</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle, #3f4c6b, #606c88);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .container {
+            width: 80%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            background: rgba(48, 51, 74, 0.95);
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 1s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        .card, .status {
+            background: #565a7b;
+            border-radius: 20px;
+            padding: 25px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        .card h2 {
+            margin-bottom: 25px;
+            color: #ffffff;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 15px 20px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #4250d5, #273b9b);
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .card h2:hover {
+            background: linear-gradient(135deg, #273b9b, #1f2f7b);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.7);
+        }
+        .status {
+            grid-column: span 3;
+            padding: 35px;
+            background: #565a7b; /* Dark grey background */
+        }
+        .status h2 {
+            margin-bottom: 25px;
+            color: #ffffff;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: default;
+            padding: 0; /* Remove padding to eliminate background color */
+            border-radius: 0; /* Remove border-radius */
+            background: none; /* Remove background color */
+        }
+        .status p {
+            font-size: 26px;
+            font-weight: bold;
+        }
+        .offline {
+            color: #ff4c4c;
+        }
+        .online {
+            color: #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card" onclick="openTestMenu()">
+            <h2>Testing</h2>
+        </div>
+        <div class="card" onclick="openRelayMenu()">
+            <h2>LED Control</h2>
+        </div>
+        <div class="card" onclick="showResult()">
+            <h2>Result</h2>
+        </div>
+        <div class="status">
+            <h2>Devices Status</h2>
+            <p id="relay-status" class="offline">Relay Offline</p>
+            <p id="camera-status" class="offline">Camera Offline</p>
+        </div>
+    </div>
+
+    <script>
+        function openTestMenu() {
+            pywebview.api.open_Test_Menu()
+        }
+
+        function openRelayMenu() {
+            pywebview.api.open_Relay_Menu()
+        }
+
+        function showResult() {
+            pywebview.api.show_result()
+        }
+
+        function updateStatus() {
+            pywebview.api.get_status().then(response => {
+                const status = JSON.parse(response);
+                const relayStatus = document.getElementById('relay-status');
+                const cameraStatus = document.getElementById('camera-status');
+
+                relayStatus.innerText = `Relay ${status.relay_connected ? 'Online' : 'Offline'}`;
+                relayStatus.className = status.relay_connected ? 'online' : 'offline';
+
+                cameraStatus.innerText = `Camera ${status.camera_connected ? 'Online' : 'Offline'}`;
+                cameraStatus.className = status.camera_connected ? 'online' : 'offline';
+            });
+        }
+
+        setInterval(updateStatus, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relay Control</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        body.loaded {
+            opacity: 1;
+        }
+
+        .container {
+            width: 80%;
+            max-width: 1100px;
+            background-color: #2e2e2e;
+            padding: 40px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .button-grid-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .button,
+        .big-button {
+            background: linear-gradient(135deg, #1d2671, #c33764);
+            border: none;
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+        }
+
+        .button:hover,
+        .big-button:hover {
+            background: linear-gradient(135deg, #1d2671, #f953c6);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        .button:active,
+        .big-button:active {
+            transform: scale(0.95);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .button.active,
+        .big-button.active {
+            background: orange;
+        }
+
+        .big-button {
+            padding: 80px 160px;
+            font-size: 2rem;
+            align-self: center;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>LED Control</h1>
+        <div class="button-grid-container">
+            <div class="button-grid">
+                <button class="button" id="led1" onclick="toggleButton('led1'); controlRelay(1, this);">LED 1</button>
+                <button class="button" id="led2" onclick="toggleButton('led2'); controlRelay(2, this);">LED 2</button>
+                <button class="button" id="led3" onclick="toggleButton('led3'); controlRelay(3, this);">LED 3</button>
+                <button class="button" id="led4"
+                    onclick="toggleButton('led4'); controlRelay(4, this)">1 and 3</button>
+            </div>
+            <button class="big-button" id="allOff" onclick="toggleAllOff(); turnOffAllRelays();">All Off</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleButton(buttonId) {
+            const button = document.getElementById(buttonId);
+            button.classList.toggle('active');
+        }
+
+        function toggleAllOff() {
+            const allOffButton = document.getElementById('allOff');
+            allOffButton.classList.toggle('active');
+            if (allOffButton.classList.contains('active')) {
+                const buttons = document.querySelectorAll('.button');
+                buttons.forEach(button => button.classList.remove('active'));
+            }
+        }
+    </script>
+
+    <script>
+        function controlRelay(relayNum, button) {
+            const action = button.classList.contains('active') ? 'off' : 'on';
+            pywebview.api.control_relay(relayNum, action).then(response => {
+                const data = JSON.parse(response);
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    updateButtonStates(data);
+                }
+            }).catch(err => console.error(err));
+        }
+
+        function turnOffAllRelays() {
+            pywebview.api.control_relay(0, 'off_all').then(response => {
+                const data = JSON.parse(response);
+                if (data.error) {
+                    alert(data.error);
+                }
+            }).catch(err => console.error(err));
+        }
+
+        function updateButtonStates(ledStates) {
+            for (let i = 0; i < ledStates.length; i++) {
+                const button = document.getElementById(`led${i + 1}`);
+                if (!ledStates[i]) {
+                    toggleButton(`led${i + 1}`)
+                } 
+            }
+        }
+
+        function getInitialStates() {
+            pywebview.api.get_led_states().then(response => {
+                const ledStates = JSON.parse(response);
+                console.log(ledStates)
+                updateButtonStates(ledStates);
+            }).catch(err => console.error(err));
+        }
+
+        window.addEventListener('pywebviewready', function() {
+            console.log('pywebview is ready');
+            getInitialStates();
+        });
+
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const body = document.body;
+            setTimeout(() => {
+                body.classList.add('loaded');
+            }, 100);
+        });
+    </script>
+</body>
+
+</html>

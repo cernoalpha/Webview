@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Result Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            opacity: 0; 
+            transition: opacity 1s ease-in-out;
+        }
+
+
+        body.loaded {
+            opacity: 1;
+        }
+
+        #filter,
+        #update,
+        #remarks,
+        #signature,
+        #print {
+            margin-bottom: 20px;
+        }
+
+        #filter label,
+        #filter input,
+        #filter button {
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        #remarks textarea {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        #signature p {
+            margin: 10px 0;
+        }
+
+        #print button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #remarks {
+            padding-top: 20px;
+        }
+
+        #form {
+            display: none;
+            border: 1px solid #ddd;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+
+        #form label,
+        #form input,
+        #form button {
+            margin-bottom: 10px;
+        }
+
+        #form input,
+        #form textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="filter">
+        <label for="serial">Filter by Serial Number:</label>
+        <input type="text" id="serial">
+        <label for="date">Filter by Date of Testing (YYYY-MM-DD):</label>
+        <input type="text" id="date">
+        <button onclick="filterData()">Filter</button>
+    </div>
+    <div id="table">
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th>Serial Number</th>
+                    <th>Project Name</th>
+                    <th>Part Number</th>
+                    <th>Part Name</th>
+                    <th>Issue Number</th>
+                    <th>Work Order Number</th>
+                    <th>Date of Testing</th>
+                    <th>PDF </th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div id="update">
+        <button onclick="showForm('update')">Update Selected Record</button>
+    </div>
+    <div id="delete">
+        <label for="delete-serial">Serial Number to Delete:</label>
+        <input type="text" id="delete-serial">
+        <button onclick="deleteRecord()">Delete Record</button>
+    </div>
+    <div id="form">
+        <h3 id="form-title">Update Record</h3>
+        <label for="form-serial">Serial Number:</label>
+        <input type="text" id="form-serial" required>
+        <label for="form-project-name">Project Name:</label>
+        <input type="text" id="form-project-name" required>
+        <label for="form-part-number">Part Number:</label>
+        <input type="text" id="form-part-number" required>
+        <label for="form-part-name">Part Name:</label>
+        <input type="text" id="form-part-name" required>
+        <label for="form-issue-number">Issue Number:</label>
+        <input type="text" id="form-issue-number" required>
+        <label for="form-work-order-number">Work Order Number:</label>
+        <input type="text" id="form-work-order-number" required>
+        <button onclick="saveRecord()">Save</button>
+        <button onclick="hideForm()">Cancel</button>
+    </div>
+    <script>
+        window.addEventListener('pywebviewready', function () {
+            fetchData();
+            document.addEventListener('DOMContentLoaded', function () {
+                document.getElementById('current-date').textContent = new Date().toISOString().split('T')[0];
+            });
+        });
+
+        function fetchData() {
+            pywebview.api.fetch_data().then(data => {
+                const tableBody = document.querySelector("#data-table tbody");
+                tableBody.innerHTML = "";
+                data.forEach(row => {
+                    const tr = document.createElement("tr");
+                    row.forEach((cell, index) => {
+                        const td = document.createElement("td");
+                        if (index === 7) { // For 'pdf_url' column, create a link
+                            const a = document.createElement("a");
+                            a.href = "#";
+                            a.textContent = "View PDF";
+                            a.onclick = function () {
+                                fetchPDF(cell);
+                                return false;
+                            };
+                            td.appendChild(a);
+                        } else {
+                            td.textContent = cell;
+                        }
+                        tr.appendChild(td);
+                    });
+                    tableBody.appendChild(tr);
+                });
+            });
+        }
+
+        function fetchPDF(pdfPath) {
+            pywebview.api.fetch_pdf(pdfPath).then(response => {
+                console.log(response)
+            });
+        }
+
+        function filterData() {
+            const serial = document.getElementById("serial").value;
+            const date = document.getElementById("date").value;
+            pywebview.api.fetch_data(serial, date).then(data => {
+                const tableBody = document.querySelector("#data-table tbody");
+                tableBody.innerHTML = "";
+                data.forEach(row => {
+                    const tr = document.createElement("tr");
+                    row.forEach((cell, index) => {
+                        const td = document.createElement("td");
+                        if (index === 7) { // For 'pdf_url' column, create a link
+                            const a = document.createElement("a");
+                            a.href = "#";
+                            a.textContent = "View PDF";
+                            a.onclick = function () {
+                                fetchPDF(cell);
+                                return false;
+                            };
+                            td.appendChild(a);
+                        } else {
+                            td.textContent = cell;
+                        }
+                        tr.appendChild(td);
+                    });
+                    tableBody.appendChild(tr);
+                });
+            });
+        }
+
+        function showForm(mode) {
+            document.getElementById('form').style.display = 'block';
+            document.getElementById('form-serial').disabled = false;
+        }
+
+        function hideForm() {
+            document.getElementById('form').style.display = 'none';
+        }
+
+        function saveRecord() {
+            const serialNumber = document.getElementById('form-serial').value || null;
+            const projectName = document.getElementById('form-project-name').value || null;
+            const partNumber = document.getElementById('form-part-number').value || null;
+            const partName = document.getElementById('form-part-name').value || null;
+            const issueNumber = document.getElementById('form-issue-number').value || null;
+            const workOrderNumber = document.getElementById('form-work-order-number').value || null;
+            const dateOfTesting = document.getElementById('date').value || null;
+            const capturedImages = null;
+            const pdfUrl = null;
+
+            const record = {
+                serial_number: serialNumber,
+                project_name: projectName,
+                part_number: partNumber,
+                part_name: partName,
+                issue_number: issueNumber,
+                work_order_number: workOrderNumber,
+                date_of_testing: dateOfTesting,
+                captured_images: capturedImages,
+                pdf_url: pdfUrl
+            };
+
+            pywebview.api.update_record(record).then(() => {
+                hideForm();
+                fetchData();
+            });
+        }
+
+        function deleteRecord() {
+            const serial_number = document.getElementById('delete-serial').value;
+            pywebview.api.delete_record(serial_number).then(() => {
+                fetchData();
+            });
+        }
+    </script>
+     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const body = document.body;
+            setTimeout(() => {
+                body.classList.add('loaded');
+            }, 100);
+        });
+    </script>
+</body>
+
+</html>
